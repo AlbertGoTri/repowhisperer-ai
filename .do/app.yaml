@@ -1,31 +1,38 @@
-spec:
-  name: repowhisperer
-  region: nyc
-  services:
-    - name: backend
-      source_dir: /backend
-      build_command: pip install -r requirements.txt
-      run_command: uvicorn main:app --host 0.0.0.0 --port 8080
-      environment_slug: python
-      instance_size_slug: basic-xxs
-      instance_count: 1
-      http_port: 8080
-      envs:
-        - key: DO_AGENT_ENDPOINT
-          scope: RUN_TIME
-          value: "https://inference.do-ai.run/v1"
-        - key: DO_AGENT_KEY
-          scope: RUN_TIME
-          type: SECRET
-      routes:
-        - path: /api
-        - path: /ws
-        - path: /health
+name: repowhisperer
+region: nyc
+services:
+  - name: backend
+    github:
+      repo: AlbertGoTri/repowhisperer-ai
+      branch: main
+      deploy_on_push: false
+    source_dir: /backend
+    build_command: pip install -r requirements.txt
+    run_command: uvicorn main:app --host 0.0.0.0 --port 8080
+    environment_slug: python
+    instance_size_slug: basic-xxs
+    instance_count: 1
+    http_port: 8080
+    envs:
+      - key: DO_AGENT_ENDPOINT
+        scope: RUN_TIME
+        value: "https://inference.do-ai.run/v1"
+      - key: DO_AGENT_KEY
+        scope: RUN_TIME
+        type: SECRET
+    routes:
+      - path: /api
+      - path: /ws
+      - path: /health
 
-  static_sites:
-    - name: frontend
-      source_dir: /frontend
-      build_command: npm install && npm run build
-      output_dir: /dist
-      routes:
-        - path: /
+static_sites:
+  - name: frontend
+    github:
+      repo: AlbertGoTri/repowhisperer-ai
+      branch: main
+      deploy_on_push: false
+    source_dir: /frontend
+    build_command: npm install && npm run build
+    output_dir: /dist
+    routes:
+      - path: /

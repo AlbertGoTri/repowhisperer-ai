@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import {
-  ArrowLeft, Send, Code2, FolderTree, ChevronDown,
-  FileCode, Loader2, Bot, User, Copy, Check, RotateCcw
+  ArrowLeft, Send, FolderTree, ChevronDown,
+  FileCode, Loader2, Copy, Check, RotateCcw
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -30,15 +30,14 @@ export default function ChatView({ repo, onBack }) {
     const langs = Object.keys(repo.language_breakdown || {}).slice(0, 5).join(', ')
     setMessages([{
       role: 'assistant',
-      content: `👋 Hey! I've indexed **${repo.name}** (${repo.file_count} files${langs ? ` — ${langs}` : ''}).
+      content: `Indexed **${repo.name}** (${repo.file_count} files${langs ? `, ${langs}` : ''}).
 
-I'm ready to help you explore this codebase. Here are some things you can ask me:
+Ready. Some things you can ask:
 
-- **"What does this project do?"** — I'll give you a high-level overview
-- **"How is the project structured?"** — Architecture and file organization
-- **"Where is authentication handled?"** — Find specific functionality
-- **"Write tests for the main module"** — Generate code
-- **"What are potential improvements?"** — Code review and suggestions
+- **"What does this project do?"** - high-level overview
+- **"How is the project structured?"** - architecture and file organization
+- **"Where is authentication handled?"** - find specific functionality
+- **"Write tests for the main module"** - generate code
 
 What would you like to know?`,
     }])
@@ -61,7 +60,7 @@ What would you like to know?`,
 
     // Prepare history (skip welcome message)
     const history = messages
-      .filter((_, i) => i > 0) // skip welcome
+      .filter((_, i) => i > 0)
       .map(m => ({ role: m.role, content: m.content }))
 
     // Add streaming assistant message
@@ -78,7 +77,6 @@ What would you like to know?`,
         })
       }
 
-      // Mark as done
       setMessages(prev => {
         const updated = [...prev]
         updated[updated.length - 1] = { role: 'assistant', content: fullContent, streaming: false }
@@ -89,7 +87,7 @@ What would you like to know?`,
         const updated = [...prev]
         updated[updated.length - 1] = {
           role: 'assistant',
-          content: `❌ Error: ${err.message}. Make sure your DigitalOcean Gradient AI key is configured.`,
+          content: `error: ${err.message}`,
           streaming: false,
         }
         return updated
@@ -111,7 +109,7 @@ What would you like to know?`,
     const langs = Object.keys(repo.language_breakdown || {}).slice(0, 5).join(', ')
     setMessages([{
       role: 'assistant',
-      content: `🔄 Chat cleared! Still working with **${repo.name}** (${repo.file_count} files${langs ? ` — ${langs}` : ''}). What would you like to explore?`,
+      content: `Chat cleared. Still working with **${repo.name}** (${repo.file_count} files${langs ? `, ${langs}` : ''}). What would you like to explore?`,
     }])
   }
 
@@ -123,64 +121,59 @@ What would you like to know?`,
   ]
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col bg-black">
       {/* Header */}
-      <header className="border-b border-slate-800 bg-[#0d1221] px-4 py-3 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-          <button onClick={onBack} className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white">
-            <ArrowLeft className="w-5 h-5" />
+      <header className="border-b border-terminal-border bg-black px-4 py-2 flex items-center justify-between shrink-0 font-mono">
+        <div className="flex items-center gap-3 text-sm">
+          <button onClick={onBack} className="p-1.5 hover:bg-terminal-surface transition-colors text-terminal-muted hover:text-white">
+            <ArrowLeft className="w-4 h-4" />
           </button>
-          <div className="flex items-center gap-2">
-            <Code2 className="w-5 h-5 text-ocean-400" />
-            <span className="font-semibold text-white">RepoWhisperer</span>
-          </div>
-          <span className="text-slate-600">·</span>
-          <a href={repo.url} target="_blank" rel="noopener noreferrer" className="text-ocean-400 hover:text-ocean-300 text-sm font-mono transition-colors">
+          <span className="text-terminal-accent font-bold">REPOWHISPERER</span>
+          <span className="text-terminal-border">|</span>
+          <a href={repo.url} target="_blank" rel="noopener noreferrer" className="text-terminal-muted hover:text-white transition-colors text-xs">
             {repo.name}
           </a>
-          <span className="px-2 py-0.5 bg-ocean-900/50 text-ocean-400 text-xs rounded-full">
-            {repo.file_count} files
-          </span>
+          <span className="text-terminal-border text-xs">[{repo.file_count} files]</span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {/* Model picker */}
           <div className="relative">
             <button
               onClick={() => setShowModelPicker(!showModelPicker)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#131829] border border-slate-700 rounded-lg text-sm text-slate-300 hover:border-slate-600 transition-colors"
+              className="flex items-center gap-1.5 px-2 py-1 border border-terminal-border text-xs text-terminal-muted hover:text-white hover:border-terminal-accent transition-colors font-mono"
             >
               {selectedModel.split('/').pop()}
-              <ChevronDown className="w-3.5 h-3.5" />
+              <ChevronDown className="w-3 h-3" />
             </button>
             {showModelPicker && (
-              <div className="absolute right-0 top-full mt-1 w-64 bg-[#131829] border border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden">
+              <div className="absolute right-0 top-full mt-1 w-64 bg-black border border-terminal-border shadow-2xl z-50">
                 {models.map((model) => (
                   <button
                     key={model.id}
                     onClick={() => { setSelectedModel(model.id); setShowModelPicker(false) }}
-                    className={`w-full px-4 py-3 text-left hover:bg-slate-800 transition-colors ${
-                      selectedModel === model.id ? 'bg-ocean-900/30 text-ocean-300' : 'text-slate-300'
+                    className={`w-full px-3 py-2 text-left hover:bg-terminal-surface transition-colors font-mono text-xs ${
+                      selectedModel === model.id ? 'text-terminal-accent' : 'text-terminal-muted'
                     }`}
                   >
-                    <div className="font-medium text-sm">{model.name}</div>
-                    <div className="text-xs text-slate-500">{model.provider}</div>
+                    <div>{model.name}</div>
+                    <div className="text-terminal-border text-xs">{model.provider}</div>
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          <button onClick={clearChat} className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white" title="Clear chat">
-            <RotateCcw className="w-4 h-4" />
+          <button onClick={clearChat} className="p-1.5 hover:bg-terminal-surface transition-colors text-terminal-muted hover:text-white" title="Clear chat">
+            <RotateCcw className="w-3.5 h-3.5" />
           </button>
 
           <button
             onClick={() => setShowSidebar(!showSidebar)}
-            className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
+            className={`p-1.5 hover:bg-terminal-surface transition-colors ${showSidebar ? 'text-terminal-accent' : 'text-terminal-muted hover:text-white'}`}
             title="File tree"
           >
-            <FolderTree className="w-4 h-4" />
+            <FolderTree className="w-3.5 h-3.5" />
           </button>
         </div>
       </header>
@@ -190,19 +183,19 @@ What would you like to know?`,
         <div className="flex-1 flex flex-col">
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-6">
-            <div className="max-w-3xl mx-auto space-y-6">
+            <div className="max-w-3xl mx-auto space-y-4">
               {messages.map((msg, i) => (
-                <MessageBubble key={i} message={msg} />
+                <MessageBlock key={i} message={msg} />
               ))}
 
-              {/* Suggested questions (show only after welcome message) */}
+              {/* Suggested questions */}
               {messages.length === 1 && !isStreaming && (
-                <div className="flex flex-wrap gap-2 ml-12">
+                <div className="flex flex-wrap gap-2 ml-6">
                   {suggestedQuestions.map((q) => (
                     <button
                       key={q}
                       onClick={() => { setInput(q); setTimeout(() => inputRef.current?.focus(), 50) }}
-                      className="px-3 py-2 text-sm bg-[#131829] border border-slate-700 rounded-xl text-slate-400 hover:text-ocean-400 hover:border-ocean-700 transition-colors"
+                      className="px-2 py-1 text-xs font-mono border border-terminal-border text-terminal-muted hover:text-terminal-accent hover:border-terminal-accent transition-colors"
                     >
                       {q}
                     </button>
@@ -215,19 +208,20 @@ What would you like to know?`,
           </div>
 
           {/* Input */}
-          <div className="border-t border-slate-800 bg-[#0d1221] px-4 py-4 shrink-0">
+          <div className="border-t border-terminal-border bg-black px-4 py-3 shrink-0">
             <div className="max-w-3xl mx-auto">
-              <div className="relative flex items-end gap-2">
+              <div className="flex items-end gap-2 font-mono">
+                <span className="text-terminal-accent py-3 select-none">{'>'}</span>
                 <textarea
                   ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={isStreaming ? 'Waiting for response...' : 'Ask about the codebase...'}
+                  placeholder={isStreaming ? 'waiting for response...' : 'ask about the codebase...'}
                   disabled={isStreaming}
                   rows={1}
-                  className="flex-1 px-4 py-3 bg-[#131829] border border-slate-700 rounded-2xl text-white placeholder-slate-500 focus:outline-none input-glow transition-all resize-none disabled:opacity-50"
-                  style={{ minHeight: '48px', maxHeight: '150px' }}
+                  className="flex-1 py-3 bg-transparent text-white placeholder-terminal-muted focus:outline-none resize-none disabled:opacity-50 text-sm font-mono"
+                  style={{ minHeight: '24px', maxHeight: '150px' }}
                   onInput={(e) => {
                     e.target.style.height = 'auto'
                     e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px'
@@ -236,17 +230,17 @@ What would you like to know?`,
                 <button
                   onClick={handleSend}
                   disabled={isStreaming || !input.trim()}
-                  className="p-3 bg-ocean-500 hover:bg-ocean-600 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-xl transition-colors shrink-0"
+                  className="p-2 text-terminal-accent hover:text-orange-400 disabled:text-terminal-border disabled:cursor-not-allowed transition-colors shrink-0"
                 >
                   {isStreaming ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    <Send className="w-5 h-5" />
+                    <Send className="w-4 h-4" />
                   )}
                 </button>
               </div>
-              <p className="text-center text-slate-600 text-xs mt-2">
-                Powered by DigitalOcean Gradient™ AI · Model: {selectedModel.split('/').pop()}
+              <p className="text-center text-terminal-border text-xs mt-1 font-mono">
+                {selectedModel.split('/').pop()}
               </p>
             </div>
           </div>
@@ -254,30 +248,30 @@ What would you like to know?`,
 
         {/* Sidebar - File tree */}
         {showSidebar && (
-          <div className="w-80 border-l border-slate-800 bg-[#0d1221] overflow-y-auto p-4">
-            <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
-              <FolderTree className="w-4 h-4 text-ocean-400" />
-              Project Structure
+          <div className="w-72 border-l border-terminal-border bg-black overflow-y-auto p-4 font-mono">
+            <h3 className="text-xs font-bold text-terminal-accent mb-3 flex items-center gap-2">
+              <FolderTree className="w-3.5 h-3.5" />
+              STRUCTURE
             </h3>
             {repo.description ? (
-              <pre className="text-xs text-slate-400 font-mono whitespace-pre-wrap leading-relaxed">
+              <pre className="text-xs text-terminal-muted whitespace-pre-wrap leading-relaxed">
                 {repo.description}
               </pre>
             ) : (
-              <p className="text-sm text-slate-500">Structure loading...</p>
+              <p className="text-xs text-terminal-border">loading...</p>
             )}
 
             {repo.language_breakdown && Object.keys(repo.language_breakdown).length > 0 && (
               <div className="mt-6">
-                <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
-                  <FileCode className="w-4 h-4 text-ocean-400" />
-                  Languages
+                <h3 className="text-xs font-bold text-terminal-accent mb-3 flex items-center gap-2">
+                  <FileCode className="w-3.5 h-3.5" />
+                  LANGUAGES
                 </h3>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {Object.entries(repo.language_breakdown).map(([lang, count]) => (
-                    <div key={lang} className="flex items-center justify-between text-sm">
-                      <span className="text-slate-400">{lang}</span>
-                      <span className="text-slate-500 font-mono text-xs">{count} files</span>
+                    <div key={lang} className="flex items-center justify-between text-xs">
+                      <span className="text-terminal-muted">{lang}</span>
+                      <span className="text-terminal-border">{count}</span>
                     </div>
                   ))}
                 </div>
@@ -295,7 +289,7 @@ What would you like to know?`,
   )
 }
 
-function MessageBubble({ message }) {
+function MessageBlock({ message }) {
   const [copied, setCopied] = useState(false)
   const isUser = message.role === 'user'
 
@@ -306,44 +300,34 @@ function MessageBubble({ message }) {
   }
 
   return (
-    <div className={`flex gap-3 ${isUser ? 'justify-end' : ''}`}>
-      {!isUser && (
-        <div className="w-8 h-8 bg-ocean-900/50 rounded-lg flex items-center justify-center shrink-0 mt-1">
-          <Bot className="w-4 h-4 text-ocean-400" />
-        </div>
-      )}
+    <div className="group font-mono">
+      {/* Label */}
+      <div className="flex items-center gap-2 mb-1">
+        <span className={`text-xs font-bold ${isUser ? 'text-white' : 'text-terminal-accent'}`}>
+          {isUser ? '> you' : '> repowhisperer'}
+        </span>
+        {!isUser && !message.streaming && message.content && (
+          <button
+            onClick={copyContent}
+            className="p-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-terminal-muted hover:text-white"
+          >
+            {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+          </button>
+        )}
+      </div>
 
-      <div className={`group relative max-w-[85%] ${
-        isUser
-          ? 'bg-ocean-600/20 border border-ocean-800 rounded-2xl rounded-tr-md px-4 py-3'
-          : 'flex-1'
-      }`}>
+      {/* Content */}
+      <div className="pl-4 border-l border-terminal-border">
         {isUser ? (
-          <p className="text-slate-200 whitespace-pre-wrap">{message.content}</p>
+          <p className="text-sm text-terminal-text whitespace-pre-wrap">{message.content}</p>
         ) : (
-          <div className={`prose prose-invert prose-sm max-w-none ${message.streaming ? 'typing-cursor' : ''}`}>
+          <div className={`prose prose-invert prose-sm prose-terminal max-w-none text-sm ${message.streaming ? 'typing-cursor' : ''}`}>
             <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
               {message.content}
             </ReactMarkdown>
           </div>
         )}
-
-        {/* Copy button */}
-        {!isUser && !message.streaming && message.content && (
-          <button
-            onClick={copyContent}
-            className="absolute -right-2 top-0 p-1.5 bg-slate-800 border border-slate-700 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-white"
-          >
-            {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-          </button>
-        )}
       </div>
-
-      {isUser && (
-        <div className="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center shrink-0 mt-1">
-          <User className="w-4 h-4 text-slate-400" />
-        </div>
-      )}
     </div>
   )
 }

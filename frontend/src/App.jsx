@@ -6,7 +6,7 @@ export default function App() {
   const [activeRepo, setActiveRepo] = useState(null)
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a]">
+    <div className="min-h-screen bg-black">
       {activeRepo ? (
         <ChatView repo={activeRepo} onBack={() => setActiveRepo(null)} />
       ) : (
