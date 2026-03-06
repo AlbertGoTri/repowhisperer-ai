@@ -31,30 +31,30 @@ Built for the [DigitalOcean Gradient AI Hackathon](https://digitalocean.devpost.
 ## Architecture
 
 ```
-┌──────────────┐     ┌───────────────────────────────┐
-│   React UI   │────>│      FastAPI Backend           │
-│  (Vite +     │     │                                │
-│  Tailwind)   │<────│  ┌─────────────────────────┐   │
-└──────────────┘     │  │   Repo Ingestion        │   │
+┌──────────────┐     ┌─────────────────────────────────┐
+│   React UI   │────>│      FastAPI Backend            │
+│  (Vite +     │     │                                 │
+│  Tailwind)   │<────│  ┌──────────────────────────┐   │
+└──────────────┘     │  │   Repo Ingestion         │   │
                      │  │   - Clone via GitPython  │   │
                      │  │   - Parse and chunk files│   │
                      │  │   - Language detection   │   │
-                     │  └────────────┬────────────┘   │
+                     │  └────────────┬─────────────┘   │
                      │               │                 │
-                     │  ┌────────────v────────────┐   │
+                     │  ┌────────────v─────────────┐   │
                      │  │   RAG Context Builder    │   │
                      │  │   - Keyword retrieval    │   │
                      │  │   - Relevance scoring    │   │
                      │  │   - Context assembly     │   │
-                     │  └────────────┬────────────┘   │
+                     │  └────────────┬─────────────┘   │
                      │               │                 │
-                     │  ┌────────────v────────────┐   │
+                     │  ┌────────────v─────────────┐   │
                      │  │ DO Gradient AI Service   │   │
                      │  │   - Serverless Inference │   │
                      │  │   - Multi-model support  │   │
                      │  │   - Streaming responses  │   │
-                     │  └─────────────────────────┘   │
-                     └───────────────────────────────┘
+                     │  └──────────────────────────┘   │
+                     └─────────────────────────────────┘
 ```
 
 ## DigitalOcean Gradient AI Usage
