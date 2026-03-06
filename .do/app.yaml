@@ -7,13 +7,10 @@ spec:
       build_command: pip install -r requirements.txt
       run_command: uvicorn main:app --host 0.0.0.0 --port 8080
       environment_slug: python
-      instance_size_slug: professional-xs
+      instance_size_slug: basic-xxs
       instance_count: 1
       http_port: 8080
       envs:
-        - key: DO_API_TOKEN
-          scope: RUN_TIME
-          type: SECRET
         - key: DO_AGENT_ENDPOINT
           scope: RUN_TIME
           value: "https://inference.do-ai.run/v1"
@@ -25,11 +22,10 @@ spec:
         - path: /ws
         - path: /health
 
+  static_sites:
     - name: frontend
       source_dir: /frontend
       build_command: npm install && npm run build
-      environment_slug: node-js
-      instance_size_slug: basic-xxs
-      instance_count: 1
+      output_dir: /dist
       routes:
         - path: /
