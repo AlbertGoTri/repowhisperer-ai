@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RepoWhisperer — Chat with any GitHub repo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #0a0e1a; color: #e2e8f0; min-height: 100vh; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+    /* Landing */
+    .landing { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+    .logo { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .logo-icon { width: 48px; height: 48px; background: #0c8ce9; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; font-weight: bold; font-family: monospace; }
+    .logo h1 { font-size: 2.5em; color: white; }
+    .logo span { color: #36a7f8; }
+    .subtitle { color: #94a3b8; font-size: 1.1em; max-width: 500px; text-align: center; margin-bottom: 40px; }
+
+    .input-row { width: 100%; max-width: 650px; position: relative; margin-bottom: 20px; }
+    .input-row input { width: 100%; padding: 16px 140px 16px 48px; background: #131829; border: 1px solid #334155; border-radius: 16px; color: white; font-size: 1.05em; outline: none; transition: box-shadow .2s; }
+    .input-row input:focus { box-shadow: 0 0 0 2px rgba(12,140,233,.3); }
+    .input-row input::placeholder { color: #64748b; }
+    .input-row .gh-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #64748b; font-size: 18px; }
+    .input-row button { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); padding: 10px 24px; background: #0c8ce9; color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: .95em; transition: background .2s; }
+    .input-row button:hover { background: #006fc7; }
+    .input-row button:disabled { background: #334155; cursor: not-allowed; }
+
+    .examples { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 48px; }
+    .examples span { color: #64748b; font-size: .9em; margin-right: 4px; }
+    .example-btn { padding: 6px 14px; background: #131829; border: 1px solid #334155; border-radius: 8px; color: #94a3b8; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: .85em; transition: all .2s; }
+    .example-btn:hover { color: #36a7f8; border-color: #1e3a5f; }
+
+    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; max-width: 800px; width: 100%; }
+    .feature { padding: 24px; background: #131829; border: 1px solid #1e293b; border-radius: 16px; }
+    .feature .f-icon { width: 40px; height: 40px; background: rgba(12,140,233,.1); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #36a7f8; font-size: 20px; margin-bottom: 12px; }
+    .feature h3 { color: white; margin-bottom: 8px; }
+    .feature p { color: #94a3b8; font-size: .9em; line-height: 1.5; }
+
+    .footer { margin-top: 48px; color: #475569; font-size: .85em; }
+    .footer a { color: #0c8ce9; text-decoration: none; }
+
+    .indexing-box { margin-top: 16px; padding: 16px; background: #131829; border: 1px solid #1e3a5f; border-radius: 12px; max-width: 650px; width: 100%; }
+    .indexing-box .dot { display: inline-block; width: 8px; height: 8px; background: #36a7f8; border-radius: 50%; animation: pulse 1.5s infinite; margin-right: 10px; }
+    .indexing-box .label { color: #7dd3fc; font-size: .9em; }
+    .indexing-box .sub { color: #475569; font-size: .8em; margin-top: 6px; margin-left: 18px; }
+    .error-msg { color: #f87171; font-size: .9em; margin-top: 10px; }
+    .demo-badge { display: inline-block; padding: 4px 12px; background: rgba(251,191,36,.15); border: 1px solid rgba(251,191,36,.3); border-radius: 8px; color: #fbbf24; font-size: .8em; margin-top: 12px; }
+
+    @keyframes pulse { 0%,100% { transform: scale(1); opacity:1 } 50% { transform: scale(1.5); opacity:.5 } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #334155; border-top-color: white; border-radius: 50%; animation: spin .6s linear infinite; margin-right: 8px; vertical-align: middle; }
+
+    /* Chat */
+    .chat-app { height: 100vh; display: flex; flex-direction: column; }
+    .chat-header { border-bottom: 1px solid #1e293b; background: #0d1221; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .chat-header .left { display: flex; align-items: center; gap: 10px; }
+    .chat-header .right { display: flex; align-items: center; gap: 8px; }
+    .back-btn, .icon-btn { padding: 8px; background: none; border: none; color: #94a3b8; cursor: pointer; border-radius: 8px; transition: all .2s; font-size: 16px; }
+    .back-btn:hover, .icon-btn:hover { background: #1e293b; color: white; }
+    .repo-name { color: #36a7f8; font-family: 'JetBrains Mono', monospace; font-size: .9em; text-decoration: none; }
+    .repo-name:hover { color: #7dd3fc; }
+    .file-badge { padding: 2px 10px; background: rgba(12,140,233,.1); color: #36a7f8; border-radius: 99px; font-size: .75em; }
+    .header-logo { color: white; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .header-logo .mini-icon { color: #36a7f8; }
+
+    .model-select { padding: 6px 12px; background: #131829; border: 1px solid #334155; border-radius: 8px; color: #cbd5e1; font-size: .85em; cursor: pointer; outline: none; }
+    .model-select option { background: #131829; }
+
+    .chat-body { flex: 1; overflow-y: auto; padding: 24px 16px; }
+    .messages { max-width: 750px; margin: 0 auto; }
+
+    .msg { display: flex; gap: 12px; margin-bottom: 24px; }
+    .msg.user { justify-content: flex-end; }
+    .msg .avatar { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 4px; font-size: 14px; }
+    .msg.bot .avatar { background: rgba(12,140,233,.15); color: #36a7f8; }
+    .msg.user .avatar { background: #1e293b; color: #94a3b8; }
+    .msg .bubble { max-width: 85%; }
+    .msg.user .bubble { background: rgba(12,140,233,.12); border: 1px solid #1e3a5f; border-radius: 16px 4px 16px 16px; padding: 12px 16px; color: #e2e8f0; white-space: pre-wrap; }
+    .msg.bot .content { line-height: 1.7; }
+    .msg.bot .content h2 { color: white; margin: 16px 0 8px; font-size: 1.2em; }
+    .msg.bot .content h3 { color: #e2e8f0; margin: 12px 0 6px; font-size: 1.05em; }
+    .msg.bot .content p { margin: 8px 0; }
+    .msg.bot .content ul, .msg.bot .content ol { margin: 8px 0 8px 20px; }
+    .msg.bot .content li { margin: 4px 0; }
+    .msg.bot .content code { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+    .msg.bot .content :not(pre) > code { background: #1e293b; padding: 2px 6px; border-radius: 4px; border: 1px solid #334155; font-size: 12px; }
+    .msg.bot .content pre { background: #1e293b !important; border: 1px solid #334155; border-radius: 8px; padding: 16px; overflow-x: auto; margin: 12px 0; }
+    .msg.bot .content pre code { border: none; padding: 0; background: none; }
+    .msg.bot .content a { color: #36a7f8; }
+    .msg.bot .content strong { color: white; }
+    .msg.bot .content table { border-collapse: collapse; margin: 8px 0; width: 100%; }
+    .msg.bot .content th, .msg.bot .content td { border: 1px solid #334155; padding: 8px 12px; text-align: left; }
+    .msg.bot .content th { background: #1e293b; }
+
+    .suggestions { display: flex; flex-wrap: wrap; gap: 8px; max-width: 750px; margin: 0 auto 20px; padding-left: 44px; }
+    .suggest-btn { padding: 8px 16px; background: #131829; border: 1px solid #334155; border-radius: 12px; color: #94a3b8; cursor: pointer; font-size: .9em; transition: all .2s; }
+    .suggest-btn:hover { color: #36a7f8; border-color: #1e3a5f; }
+
+    @keyframes blink { 0%,100% { opacity:1 } 50% { opacity:0 } }
+    .typing::after { content: '▊'; animation: blink 1s infinite; color: #36a7f8; }
+
+    .chat-input-area { border-top: 1px solid #1e293b; background: #0d1221; padding: 16px; flex-shrink: 0; }
+    .chat-input-box { max-width: 750px; margin: 0 auto; display: flex; gap: 8px; align-items: flex-end; }
+    .chat-input-box textarea { flex: 1; padding: 12px 16px; background: #131829; border: 1px solid #334155; border-radius: 16px; color: white; font-size: 1em; font-family: inherit; outline: none; resize: none; min-height: 48px; max-height: 150px; transition: box-shadow .2s; }
+    .chat-input-box textarea:focus { box-shadow: 0 0 0 2px rgba(12,140,233,.3); }
+    .chat-input-box textarea::placeholder { color: #64748b; }
+    .send-btn { padding: 12px; background: #0c8ce9; border: none; border-radius: 12px; color: white; cursor: pointer; transition: background .2s; flex-shrink: 0; font-size: 18px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; }
+    .send-btn:hover { background: #006fc7; }
+    .send-btn:disabled { background: #334155; cursor: not-allowed; }
+    .input-footer { text-align: center; color: #475569; font-size: .75em; margin-top: 8px; }
+
+    /* Sidebar */
+    .chat-main { display: flex; flex: 1; overflow: hidden; }
+    .chat-content { flex: 1; display: flex; flex-direction: column; }
+    .sidebar { width: 320px; border-left: 1px solid #1e293b; background: #0d1221; overflow-y: auto; padding: 16px; }
+    .sidebar h3 { font-size: .85em; color: #94a3b8; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .sidebar pre { font-size: .75em; color: #64748b; font-family: 'JetBrains Mono', monospace; white-space: pre-wrap; line-height: 1.5; }
+    .sidebar .lang-list { margin-top: 20px; }
+    .sidebar .lang-item { display: flex; justify-content: space-between; font-size: .85em; padding: 4px 0; }
+    .sidebar .lang-item .name { color: #94a3b8; }
+    .sidebar .lang-item .count { color: #64748b; font-family: monospace; font-size: .8em; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- ═══ LANDING VIEW ═══ -->
+<div id="landing" class="landing">
+  <div class="logo">
+    <div class="logo-icon">&lt;/&gt;</div>
+    <h1>Repo<span>Whisperer</span></h1>
+  </div>
+  <p class="subtitle">Paste a GitHub repo URL and chat with your codebase. Understand architecture, find code, generate tests — powered by AI.</p>
+
+  <div class="input-row">
+    <span class="gh-icon">⊙</span>
+    <input type="url" id="repoInput" placeholder="https://github.com/owner/repo" />
+    <button id="exploreBtn" onclick="handleIndexRepo()">Explore →</button>
+  </div>
+
+  <div id="errorMsg" class="error-msg hidden"></div>
+  <div id="indexingBox" class="indexing-box hidden">
+    <span class="dot"></span>
+    <span class="label">Cloning and indexing <code id="indexingName"></code>...</span>
+    <div class="sub">This usually takes 10-30 seconds depending on repo size.</div>
+  </div>
+
+  <div class="examples">
+    <span>Try:</span>
+    <button class="example-btn" onclick="setExample('https://github.com/fastapi/fastapi')">fastapi/fastapi</button>
+    <button class="example-btn" onclick="setExample('https://github.com/expressjs/express')">expressjs/express</button>
+    <button class="example-btn" onclick="setExample('https://github.com/pallets/flask')">pallets/flask</button>
+  </div>
+
+  <div class="features">
+    <div class="feature">
+      <div class="f-icon">🔍</div>
+      <h3>Understand</h3>
+      <p>Ask about architecture, patterns, and how any part of the code works.</p>
+    </div>
+    <div class="feature">
+      <div class="f-icon">💬</div>
+      <h3>Chat</h3>
+      <p>Have a conversation about the code. Get explanations, find bugs, explore.</p>
+    </div>
+    <div class="feature">
+      <div class="f-icon">⚡</div>
+      <h3>Generate</h3>
+      <p>Create tests, refactor code, write docs — all matching the repo's style.</p>
+    </div>
+  </div>
+
+  <div class="footer">
+    Powered by <a href="https://www.digitalocean.com/products/gradient/platform" target="_blank">DigitalOcean Gradient™ AI</a>
+  </div>
+</div>
+
+<!-- ═══ CHAT VIEW ═══ -->
+<div id="chatView" class="chat-app hidden">
+  <header class="chat-header">
+    <div class="left">
+      <button class="back-btn" onclick="goBack()" title="Back">←</button>
+      <div class="header-logo"><span class="mini-icon">&lt;/&gt;</span> RepoWhisperer</div>
+      <span style="color: #334155">·</span>
+      <a id="chatRepoLink" class="repo-name" target="_blank" href="#"></a>
+      <span id="chatFileBadge" class="file-badge"></span>
+    </div>
+    <div class="right">
+      <select id="modelSelect" class="model-select"></select>
+      <button class="icon-btn" onclick="clearChat()" title="Clear chat">↺</button>
+      <button class="icon-btn" onclick="toggleSidebar()" title="File tree">📂</button>
+    </div>
+  </header>
+
+  <div class="chat-main">
+    <div class="chat-content">
+      <div class="chat-body" id="chatBody">
+        <div class="messages" id="messagesContainer"></div>
+        <div id="suggestionsContainer" class="suggestions"></div>
+      </div>
+
+      <div class="chat-input-area">
+        <div class="chat-input-box">
+          <textarea id="chatInput" placeholder="Ask about the codebase..." rows="1" onkeydown="handleChatKey(event)" oninput="autoResize(this)"></textarea>
+          <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+        </div>
+        <div class="input-footer" id="inputFooter">Powered by DigitalOcean Gradient™ AI</div>
+      </div>
+    </div>
+
+    <div id="sidebar" class="sidebar hidden">
+      <h3>📂 Project Structure</h3>
+      <pre id="sidebarTree">Loading...</pre>
+      <div class="lang-list" id="sidebarLangs"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ─── State ─────────────────────────────────
+  let currentRepo = null;
+  let chatHistory = [];
+  let isStreaming = false;
+  let models = [];
+  const API = '';
+
+  // ─── Landing ───────────────────────────────
+  function setExample(url) {
+    document.getElementById('repoInput').value = url;
+    document.getElementById('repoInput').focus();
+  }
+
+  async function handleIndexRepo() {
+    const input = document.getElementById('repoInput');
+    const url = input.value.trim();
+    if (!url) return;
+
+    const btn = document.getElementById('exploreBtn');
+    const errorEl = document.getElementById('errorMsg');
+    const indexingBox = document.getElementById('indexingBox');
+
+    errorEl.classList.add('hidden');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Loading...';
+
+    try {
+      const res = await fetch(`${API}/api/repos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repo_url: url }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Failed to index repository');
+      }
+
+      const repo = await res.json();
+
+      if (repo.status === 'ready') {
+        openChat(repo);
+        return;
+      }
+
+      // Show indexing status
+      document.getElementById('indexingName').textContent = repo.name;
+      indexingBox.classList.remove('hidden');
+
+      // Poll for status
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusRes = await fetch(`${API}/api/repos/${repo.id}`);
+          const statusData = await statusRes.json();
+
+          if (statusData.status === 'ready') {
+            clearInterval(pollInterval);
+            openChat(statusData);
+          } else if (statusData.status === 'error') {
+            clearInterval(pollInterval);
+            errorEl.textContent = 'Failed to index repository. Check the URL and try again.';
+            errorEl.classList.remove('hidden');
+            indexingBox.classList.add('hidden');
+            btn.disabled = false;
+            btn.textContent = 'Explore →';
+          }
+        } catch (e) { /* keep polling */ }
+      }, 2000);
+
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Explore →';
+    }
+  }
+
+  // ─── Chat ──────────────────────────────────
+  async function openChat(repo) {
+    currentRepo = repo;
+    chatHistory = [];
+
+    // Switch views
+    document.getElementById('landing').classList.add('hidden');
+    document.getElementById('chatView').classList.remove('hidden');
+
+    // Set header info
+    document.getElementById('chatRepoLink').textContent = repo.name;
+    document.getElementById('chatRepoLink').href = repo.url;
+    document.getElementById('chatFileBadge').textContent = `${repo.file_count} files`;
+
+    // Load models
+    try {
+      const modRes = await fetch(`${API}/api/models`);
+      const modData = await modRes.json();
+      models = modData.models || [];
+      const select = document.getElementById('modelSelect');
+      select.innerHTML = models.map(m =>
+        `<option value="${m.id}">${m.name}</option>`
+      ).join('');
+    } catch (e) { console.error('Failed to load models', e); }
+
+    // Update sidebar
+    updateSidebar(repo);
+
+    // Welcome message
+    const langs = Object.keys(repo.language_breakdown || {}).slice(0, 5).join(', ');
+    const welcome = `👋 Hey! I've indexed **${repo.name}** (${repo.file_count} files${langs ? ` — ${langs}` : ''}).
+
+I'm ready to help you explore this codebase. Here are some things you can ask me:
+
+- **"What does this project do?"** — high-level overview
+- **"How is the project structured?"** — architecture and file organization
+- **"Where is authentication handled?"** — find specific functionality
+- **"Write tests for the main module"** — generate code
+- **"What are potential improvements?"** — code review and suggestions
+
+What would you like to know?`;
+
+    const container = document.getElementById('messagesContainer');
+    container.innerHTML = '';
+    addMessage('bot', welcome);
+    showSuggestions();
+    document.getElementById('chatInput').focus();
+  }
+
+  function goBack() {
+    document.getElementById('chatView').classList.add('hidden');
+    document.getElementById('landing').classList.remove('hidden');
+    document.getElementById('exploreBtn').disabled = false;
+    document.getElementById('exploreBtn').textContent = 'Explore →';
+    document.getElementById('indexingBox').classList.add('hidden');
+    currentRepo = null;
+  }
+
+  function addMessage(role, content, isStreamingMsg = false) {
+    const container = document.getElementById('messagesContainer');
+    const div = document.createElement('div');
+    div.className = `msg ${role}`;
+
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.textContent = role === 'bot' ? '🤖' : '👤';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+
+    if (role === 'bot') {
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'content' + (isStreamingMsg ? ' typing' : '');
+      contentDiv.innerHTML = marked.parse(content || '');
+      bubble.appendChild(contentDiv);
+    } else {
+      bubble.textContent = content;
+    }
+
+    if (role === 'user') {
+      div.appendChild(bubble);
+      div.appendChild(avatar);
+    } else {
+      div.appendChild(avatar);
+      div.appendChild(bubble);
+    }
+
+    container.appendChild(div);
+    scrollToBottom();
+    return div;
+  }
+
+  function updateLastBotMessage(content, isDone = false) {
+    const msgs = document.querySelectorAll('.msg.bot');
+    const last = msgs[msgs.length - 1];
+    if (!last) return;
+    const contentDiv = last.querySelector('.content');
+    if (contentDiv) {
+      contentDiv.innerHTML = marked.parse(content);
+      if (isDone) contentDiv.classList.remove('typing');
+    }
+    scrollToBottom();
+  }
+
+  function scrollToBottom() {
+    const body = document.getElementById('chatBody');
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function showSuggestions() {
+    const container = document.getElementById('suggestionsContainer');
+    const questions = [
+      "What does this project do?",
+      "How is the code structured?",
+      "What are the main dependencies?",
+      "Find potential bugs or issues",
+    ];
+    container.innerHTML = questions.map(q =>
+      `<button class="suggest-btn" onclick="useSuggestion('${q}')">${q}</button>`
+    ).join('');
+  }
+
+  function useSuggestion(text) {
+    document.getElementById('chatInput').value = text;
+    document.getElementById('suggestionsContainer').innerHTML = '';
+    sendMessage();
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const msg = input.value.trim();
+    if (!msg || isStreaming) return;
+
+    input.value = '';
+    input.style.height = 'auto';
+    document.getElementById('suggestionsContainer').innerHTML = '';
+
+    addMessage('user', msg);
+    chatHistory.push({ role: 'user', content: msg });
+
+    isStreaming = true;
+    document.getElementById('sendBtn').disabled = true;
+
+    // Add empty bot message for streaming
+    addMessage('bot', '', true);
+
+    const model = document.getElementById('modelSelect').value;
+    let fullResponse = '';
+
+    try {
+      const res = await fetch(`${API}/api/chat/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repo_id: currentRepo.id,
+          message: msg,
+          history: chatHistory.slice(0, -1), // exclude last user msg, it's in 'message'
+          model: model || null,
+        }),
+      });
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') break;
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.error) throw new Error(parsed.error);
+              if (parsed.content) {
+                fullResponse += parsed.content;
+                updateLastBotMessage(fullResponse);
+              }
+            } catch (e) {
+              if (e.message && !e.message.includes('JSON')) console.error(e);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      fullResponse = `❌ Error: ${err.message}. Make sure the backend is running.`;
+    }
+
+    updateLastBotMessage(fullResponse, true);
+    chatHistory.push({ role: 'assistant', content: fullResponse });
+
+    // Keep history manageable
+    if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
+
+    isStreaming = false;
+    document.getElementById('sendBtn').disabled = false;
+    input.focus();
+  }
+
+  function handleChatKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 150) + 'px';
+  }
+
+  function clearChat() {
+    chatHistory = [];
+    const container = document.getElementById('messagesContainer');
+    container.innerHTML = '';
+    const langs = Object.keys(currentRepo.language_breakdown || {}).slice(0, 5).join(', ');
+    addMessage('bot', `🔄 Chat cleared! Still working with **${currentRepo.name}** (${currentRepo.file_count} files${langs ? ` — ${langs}` : ''}). What would you like to explore?`);
+    showSuggestions();
+  }
+
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('hidden');
+  }
+
+  function updateSidebar(repo) {
+    const treeEl = document.getElementById('sidebarTree');
+    treeEl.textContent = repo.description || 'Loading...';
+
+    const langsEl = document.getElementById('sidebarLangs');
+    const breakdown = repo.language_breakdown || {};
+    if (Object.keys(breakdown).length > 0) {
+      langsEl.innerHTML = '<h3>📄 Languages</h3>' +
+        Object.entries(breakdown).map(([lang, count]) =>
+          `<div class="lang-item"><span class="name">${lang}</span><span class="count">${count} files</span></div>`
+        ).join('');
+    }
+  }
+
+  // Handle Enter on landing input
+  document.getElementById('repoInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') handleIndexRepo();
+  });
+</script>
+</body>
+</html>
